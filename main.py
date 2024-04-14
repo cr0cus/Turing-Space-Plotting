@@ -9,7 +9,7 @@ import sv_ttk
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
 
-import plottingmath as pm
+from calculations import TuringRegionVisualizer 
 
 import sympy as sp
 from sympy import symbols, Function, Eq, sympify, parse_expr
@@ -108,35 +108,17 @@ class MainWindow:
         ax_labels = self.cb_variables.get()
         vars_list = [ax_labels.split(', ')[0][1:], ax_labels.split(', ')[1][:-1]]
 
-        u, v, a, b = sp.symbols('u, v, a, b')
-        detj, f_u = sp.symbols('DetJ, f_u')
-        d = sp.symbols('d')
-        mu = sp.symbols('mu')
-
-        f = None
-        g = None
-        if sys == "Брюсселятор":
-            f = a - (b + 1) * u + u ** 2 * v
-            g = b * u - u ** 2 * v
-        elif sys == "Система Шнакенберга":
-            f = u ** 2 * v - u + a
-            g = -u ** 2 * v + b
-
-        jac = pm.jacobian(f, g, u, v)
-
         ox_lnsp = np.linspace(x_lim[0], x_lim[1], 500)
         oy_lnsp = np.linspace(y_lim[0], y_lim[1], 500)
         ox_grid, oy_grid = np.meshgrid(ox_lnsp, oy_lnsp)
 
-        necessary_inequals = [cond(ox_grid, oy_grid, d_var) for cond in pm.necessary_conds(jac, vars_list, d, a, b)]
-        region = np.ones_like(ox_grid)
-        for ineq in necessary_inequals:
-            region[ineq == False] = 0
-        necessary_region = region
+        parabolic_system = TuringRegionVisualizer(sys, x_lim, y_lim)
+        necessary_region, necessary_curves = parabolic_system.get_necessary_region(vars_list, ox_grid, oy_grid, d_var)
+        #sufficient_region, sufficient_curves = parabolic_system.get_sufficient_region(vars_list, ox_grid, oy_grid, d_var)
 
         self.ax.contourf(ox_grid, oy_grid, necessary_region, hatches=['', '\\\\'], alpha=0, levels=[-0.5, 0.5, 1.5])
         styles_list = ['solid', 'dashed', 'dashdot']
-        for i, ineq in enumerate(necessary_inequals):
+        for i, ineq in enumerate(necessary_curves):
             self.ax.contour(ox_grid, oy_grid, ineq, linestyles=styles_list[i], linewidths=1, colors='k', levels=[0])
 
         self.ax.set(xlabel=vars_list[0], ylabel=vars_list[1])
